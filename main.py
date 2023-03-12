@@ -9,7 +9,7 @@ import dbusnotify
 from bs4 import BeautifulSoup, Tag
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 book_entry = namedtuple("book_entry", "id title author error")
@@ -18,6 +18,8 @@ book_entry = namedtuple("book_entry", "id title author error")
 HOME_DIR = os.path.expanduser("~")
 
 XSPF_HEAD = '<?xml version="1.0" encoding="UTF-8"?>'
+
+MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "ogg", "wma"]
 
 
 def log_it(level='info', src_name=None, text=None):
@@ -104,7 +106,7 @@ class PlaylistHandler(object):
 
     @directories.setter
     def directories(self, in_dirs):
-        self._directories = in_dirs if isinstance(in_dirs, list) else list()
+        self._directories = in_dirs if isinstance(in_dirs, tuple) else ("", list())
 
     @property
     def processed_path(self):
@@ -153,16 +155,29 @@ class PlaylistHandler(object):
     def _abs_path(parent, children):
         return [os.path.join(parent, child) for child in children]
 
+    @staticmethod
+    def has_media(dir_path):
+        for curr_dir, sub_dirs, files in os.walk(dir_path):
+            if not files:
+                continue
+
+            if set(MEDIA_EXTENSIONS).intersection(set([fname.split(".")[-1] for fname in files if "." in fname])):
+                return True
+
+        return False
+
     def list_directories(self, in_dir=None):
         if not in_dir:
             in_dir = self.source_dir
 
-        out_dirs = list()
+        work_dirs = list()
         for curr_dir, sub_dirs, files in os.walk(in_dir):
             if curr_dir != in_dir:
                 break
 
-            out_dirs += (curr_dir, [sdir for sdir in sub_dirs if sdir not in ['.Trash-1000', 'playlist']])
+            work_dirs += [s_dir for s_dir in sub_dirs]
+
+        out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))])
 
         return out_dirs
 

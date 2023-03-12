@@ -44,10 +44,10 @@ Please see `requirements.txt`.
 
 Mar 2023 First draft, tested locally on Manjaro Linux and VLC media player 3.0.18.
 
-### Further Development
+### To Do
 
-Add capability to create a playlist, where (some) items correspond to individual media files, instead of assuming that 
-subdirectories of the input directory contain media files.
+Add capability to create a playlist, where (some) items correspond to individual
+media files (songs).
 
 ## Copyright
 
