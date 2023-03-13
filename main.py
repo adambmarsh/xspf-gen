@@ -170,16 +170,31 @@ class PlaylistHandler(object):
         if not in_dir:
             in_dir = self.source_dir
 
-        work_dirs = list()
+        work_dirs = work_files = list()
         for curr_dir, sub_dirs, files in os.walk(in_dir):
             if curr_dir != in_dir:
                 break
 
             work_dirs += [s_dir for s_dir in sub_dirs]
+            # Get files, but only from the top directory
+            work_files = self.list_dir_files(in_dir=in_dir)
 
-        out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))])
+        out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))] + work_files)
 
         return out_dirs
+
+    def list_dir_files(self, in_dir=None):
+        if not in_dir:
+            in_dir = self.source_dir
+
+        work_list = list()
+        for curr_dir, sub_dirs, files in os.walk(in_dir):
+            if curr_dir != in_dir:
+                break
+
+            work_list += [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
+
+        return work_list
 
     @staticmethod
     def write_file(filename, file_data, dest_dir=None):

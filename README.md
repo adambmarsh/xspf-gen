@@ -44,11 +44,6 @@ Please see `requirements.txt`.
 
 Mar 2023 First draft, tested locally on Manjaro Linux and VLC media player 3.0.18.
 
-### To Do
-
-Add capability to create a playlist, where (some) items correspond to individual
-media files (songs).
-
 ## Copyright
 
 Copyright Adam Bukolt
