@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from datetime import datetime
 import re
 from collections import namedtuple
 from enum import auto, Enum
@@ -161,8 +162,9 @@ class PlaylistHandler(object):
             if not files:
                 continue
 
-            if set(MEDIA_EXTENSIONS).intersection(set([fname.split(".")[-1] for fname in files if "." in fname])):
-                return True
+            for file_name in files:
+                if file_name.split(".")[-1] in MEDIA_EXTENSIONS:
+                    return True
 
         return False
 
@@ -176,8 +178,8 @@ class PlaylistHandler(object):
                 break
 
             work_dirs += [s_dir for s_dir in sub_dirs]
-            # Get files, but only from the top directory
-            work_files = self.list_dir_files(in_dir=in_dir)
+            # Get media files, but only from the top directory
+            work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
 
         out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))] + work_files)
 
@@ -326,6 +328,7 @@ class PlaylistHandler(object):
 
 
 if __name__ == '__main__':
+    start_time = datetime.now()
     parser = argparse.ArgumentParser(description="This program generates or updates an XSPF playlist by scanning a"
                                      "directory for subdirectories containing music files.")
     parser.add_argument("-d", "--directory", help="Full path to the directory from which to add tracks.",
@@ -350,6 +353,7 @@ if __name__ == '__main__':
     ph.save_playlist(out_soup)
 
     log_it(level="info",
-           text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}")
+           text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}, "
+           f"runtime={str(datetime.now() - start_time)}")
 
     exit(0)
