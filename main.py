@@ -8,6 +8,7 @@ from enum import auto, Enum
 
 import dbusnotify
 from bs4 import BeautifulSoup, Tag
+from dotenv import dotenv_values
 
 
 __version__ = '0.1.1'
@@ -73,7 +74,7 @@ class PlaylistHandler(object):
         self.source_dir = source_dir
         self.start_file = start_file
         self.out_file = out_file
-        self.directories = self.list_directories()
+        self.directories = tuple()
         self.processed_path = os.path.join(os.getenv('HOME'), "temp")
 
     @property
@@ -124,8 +125,12 @@ class PlaylistHandler(object):
         return set_a.issubset(set_b) or set_b.issubset(set_a)
 
     @staticmethod
-    def _post_notification(in_summary="calibre_utils", in_description=""):
-        icon_file = os.path.join(os.getcwd(), 'calibre-utils.png')
+    def _post_notification(in_summary="xspf-gen", in_description=""):
+        config = dotenv_values(".env-xspf-gen")
+        icon_file = os.path.join(os.getcwd(), config.get("XSPF-GEN-ICON", ''))
+
+        if not os.path.isfile(icon_file):
+            icon_file = ""
         dbusnotify.write(
             in_description,
             title=in_summary,
@@ -133,11 +138,11 @@ class PlaylistHandler(object):
         )
 
     def _notify(self, code=Result.UNKNOWN, alt_text=None):
-        summary = "calibre-utils"
+        summary = "xspf-gen"
 
         notify_text = {
-            Result.PROCESSING: f"playlist_generator: Processing  file {repr(self.start_file)} ...",
-            Result.FILE_DOES_NOT_EXIST: f"The file {repr(self.start_file)} does not exist.",
+            Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
+            else "Starting to generate playlist ...",
             Result.PROCESSED:
                 f"{repr(self.start_file)} is in Calibre and converted to mobi, moving it to {self.processed_path}",
         }
@@ -288,6 +293,8 @@ class PlaylistHandler(object):
         return max([int(tag.text) for tag in in_soup.find_all(name="vlc:id", recursive=True) if isinstance(tag, Tag)])
 
     def build_playlist(self):
+        self._notify(Result.PROCESSING)
+        self.directories = self.list_directories()
         soup = self.get_soup()
         tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
         last_id = self.get_last_id(soup)
