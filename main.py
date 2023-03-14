@@ -339,8 +339,9 @@ if __name__ == '__main__':
     out_soup, count = ph.build_playlist()
     ph.save_playlist(out_soup, tracks=count)
 
+    input_file_str = f"file {args.in_file}, " if args.in_file else ""
     log_it(level="info",
-           text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}, "
-           f"runtime={str(datetime.now() - start_time)}")
+           text=f"Generated a playlist with {count} items from {input_file_str}directory {args.source_dir}, "
+           f"run time={str(datetime.now() - start_time)}")
 
     exit(0)
