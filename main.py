@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup, Tag
 from dotenv import dotenv_values
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 media_items = namedtuple("media_dirs", "parent files")
@@ -43,16 +43,8 @@ def log_it(level='info', src_name=None, text=None):
 class Result(Enum):
     PROCESSING = auto()
     FILE_DOES_NOT_EXIST = auto()
-    NO_EXTENSION = auto()
-    CANNOT_EXTRACT_TITLE = auto()
-    TITLE_EMPTY = auto()
-    BOOK_NOT_FOUND = auto()
-    UNABLE_TO_ADD_BOOK = auto()
-    CONVERSION_FAILED = auto()
-    CONVERSION_ABANDONED_PDF = auto()
-    CONVERSION_SUCCESSFUL = auto()
-    FORMAT_IN_DB = auto()
-    UNABLE_TO_ADD_FORMAT = auto()
+    PLAYLIST_GENERATED = auto()
+    PLAYLIST_SAVED = auto()
     PROCESSED = auto()
     UNKNOWN = auto()
 
@@ -68,14 +60,12 @@ class PlaylistHandler(object):
         self._start_file = None
         self._source_dir = None
         self._directories = None
-        self._processed_path = None
         self._out_file = None
 
         self.source_dir = source_dir
         self.start_file = start_file
         self.out_file = out_file
         self.directories = tuple()
-        self.processed_path = os.path.join(os.getenv('HOME'), "temp")
 
     @property
     def start_file(self):
@@ -109,14 +99,6 @@ class PlaylistHandler(object):
     def directories(self, in_dirs):
         self._directories = in_dirs if isinstance(in_dirs, tuple) else ("", list())
 
-    @property
-    def processed_path(self):
-        return self._processed_path
-
-    @processed_path.setter
-    def processed_path(self, in_path):
-        self._processed_path = in_path
-
     @staticmethod
     def is_subset(in_a, in_b):
         set_a = set(re.split(r'[:_. ,]+', in_a))
@@ -137,16 +119,20 @@ class PlaylistHandler(object):
             icon=icon_file,  # On Windows .ico is required, on Linux - .png
         )
 
-    def _notify(self, code=Result.UNKNOWN, alt_text=None):
+    def _notify(self, code=Result.UNKNOWN, **kwargs):
         summary = "xspf-gen"
+
+        track_count = kwargs.get('track_count', 0)
 
         notify_text = {
             Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
             else "Starting to generate playlist ...",
+            Result.PLAYLIST_GENERATED: "Playlist ready" + f", contains {track_count} entries" if track_count else "",
             Result.PROCESSED:
-                f"{repr(self.start_file)} is in Calibre and converted to mobi, moving it to {self.processed_path}",
+                f"Playlist saved in {self.out_file}" + f", contains {track_count} tracks" if track_count else "",
         }
 
+        alt_text = kwargs.get("alt_text", None)
         if alt_text:
             self._post_notification(summary, alt_text)
             return
@@ -319,15 +305,15 @@ class PlaylistHandler(object):
             tracklist.append(new_track)
             music_node.append(soup.new_tag(name="vlc:item", tid=f"{last_id}"))
 
-        self._notify(alt_text=f"Playlist generated, contains {last_id} entries")
+        # self._notify(code=Result.PLAYLIST_GENERATED, track_count=last_id)
         return soup, last_id
 
-    def save_playlist(self, in_soup):
+    def save_playlist(self, in_soup, tracks=0):
         output_file = os.path.basename(self.out_file)
         output_path = next(iter(self.out_file.split(output_file)), "")
 
         self.write_file(output_file, str(in_soup), output_path)
-        self._notify(alt_text=f"Playlist saved to {self.out_file}")
+        self._notify(Result.PROCESSED, track_count=tracks)
 
 
 if __name__ == '__main__':
@@ -353,7 +339,7 @@ if __name__ == '__main__':
 
     ph = PlaylistHandler(source_dir=args.source_dir, start_file=args.in_file, out_file=args.out_file)
     out_soup, count = ph.build_playlist()
-    ph.save_playlist(out_soup)
+    ph.save_playlist(out_soup, tracks=count)
 
     log_it(level="info",
            text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}, "
