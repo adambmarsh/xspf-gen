@@ -173,19 +173,6 @@ class PlaylistHandler(object):
 
         return out_dirs
 
-    def list_dir_files(self, in_dir=None):
-        if not in_dir:
-            in_dir = self.source_dir
-
-        work_list = list()
-        for curr_dir, sub_dirs, files in os.walk(in_dir):
-            if curr_dir != in_dir:
-                break
-
-            work_list += [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
-
-        return work_list
-
     @staticmethod
     def write_file(filename, file_data, dest_dir=None):
         cur_dir = os.getcwd()
