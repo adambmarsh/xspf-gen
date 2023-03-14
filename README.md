@@ -49,7 +49,7 @@ Mar 2023 First draft, tested locally on Manjaro Linux and VLC media player 3.0.1
 Copyright Adam Bukolt
 
 Note that the copyright refers to the code and scripts in this repository and
-expressly not to any third-party dependencies or the Calibre application.
+expressly not to any third-party dependencies.
 
 ## License
 
