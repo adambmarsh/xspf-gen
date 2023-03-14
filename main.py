@@ -51,10 +51,8 @@ class Result(Enum):
 
 class PlaylistHandler(object):
     """
-    This class is dedicated to processing one book file at a time.
-    Processing involves picking up the file from the designated directory,
-    checking if it is in Calibre DB and if not adding it to Calibre and
-    then converting it to mobi if the mobi format is not already in the DB.
+    This class either creates a new XSPF playlist or extends an existing one
+    by adding track files.
     """
     def __init__(self, source_dir="~/temp", start_file="", out_file=""):
         self._start_file = None
