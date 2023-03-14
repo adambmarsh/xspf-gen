@@ -3,17 +3,18 @@ import json
 import os
 import re
 from collections import namedtuple
+from datetime import datetime
 from enum import auto, Enum
 
 import dbusnotify
 from bs4 import BeautifulSoup, Tag
+from dotenv import dotenv_values
 
 
 __version__ = '0.1.1'
 
 
-book_entry = namedtuple("book_entry", "id title author error")
-
+media_items = namedtuple("media_dirs", "parent files")
 
 HOME_DIR = os.path.expanduser("~")
 
@@ -73,7 +74,7 @@ class PlaylistHandler(object):
         self.source_dir = source_dir
         self.start_file = start_file
         self.out_file = out_file
-        self.directories = self.list_directories()
+        self.directories = tuple()
         self.processed_path = os.path.join(os.getenv('HOME'), "temp")
 
     @property
@@ -124,8 +125,12 @@ class PlaylistHandler(object):
         return set_a.issubset(set_b) or set_b.issubset(set_a)
 
     @staticmethod
-    def _post_notification(in_summary="calibre_utils", in_description=""):
-        icon_file = os.path.join(os.getcwd(), 'calibre-utils.png')
+    def _post_notification(in_summary="xspf-gen", in_description=""):
+        config = dotenv_values(".env-xspf-gen")
+        icon_file = os.path.join(os.getcwd(), config.get("XSPF-GEN-ICON", ''))
+
+        if not os.path.isfile(icon_file):
+            icon_file = ""
         dbusnotify.write(
             in_description,
             title=in_summary,
@@ -133,11 +138,11 @@ class PlaylistHandler(object):
         )
 
     def _notify(self, code=Result.UNKNOWN, alt_text=None):
-        summary = "calibre-utils"
+        summary = "xspf-gen"
 
         notify_text = {
-            Result.PROCESSING: f"playlist_generator: Processing  file {repr(self.start_file)} ...",
-            Result.FILE_DOES_NOT_EXIST: f"The file {repr(self.start_file)} does not exist.",
+            Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
+            else "Starting to generate playlist ...",
             Result.PROCESSED:
                 f"{repr(self.start_file)} is in Calibre and converted to mobi, moving it to {self.processed_path}",
         }
@@ -152,16 +157,14 @@ class PlaylistHandler(object):
         self._post_notification(summary, notify_text[code])
 
     @staticmethod
-    def _abs_path(parent, children):
-        return [os.path.join(parent, child) for child in children]
+    def has_media(abs_parent, dir_name):
+        dir_path = os.path.join(abs_parent, dir_name)
 
-    @staticmethod
-    def has_media(dir_path):
         for curr_dir, sub_dirs, files in os.walk(dir_path):
             if not files:
                 continue
 
-            if set(MEDIA_EXTENSIONS).intersection(set([fname.split(".")[-1] for fname in files if "." in fname])):
+            if next((file_name for file_name in files if str(file_name).split(".")[-1] in MEDIA_EXTENSIONS), []):
                 return True
 
         return False
@@ -176,10 +179,13 @@ class PlaylistHandler(object):
                 break
 
             work_dirs += [s_dir for s_dir in sub_dirs]
-            # Get files, but only from the top directory
-            work_files = self.list_dir_files(in_dir=in_dir)
+            # Get media files, but only from the top directory
+            work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
 
-        out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))] + work_files)
+        out_dirs = media_items(
+            parent=in_dir,
+            files=sorted(work_files) + sorted([w_dir for w_dir in work_dirs if self.has_media(in_dir, w_dir)])
+        )
 
         return out_dirs
 
@@ -300,17 +306,16 @@ class PlaylistHandler(object):
         return max([int(tag.text) for tag in in_soup.find_all(name="vlc:id", recursive=True) if isinstance(tag, Tag)])
 
     def build_playlist(self):
+        self._notify(Result.PROCESSING)
+        self.directories = self.list_directories()
         soup = self.get_soup()
         tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node_music(soup)
-        directories = self.directories[1]
-        sorted_directories = sorted(directories)
-        dir_path = self.directories[0]
 
-        for ix, dir_name in enumerate(sorted_directories):
+        for ix, dir_name in enumerate(self.directories.files):
             encoded_dir = re.sub(r']', '%5D', re.sub(r'\[', '%5B', dir_name))
-            new_track, last_id = self.build_track(soup, os.path.join(dir_path, encoded_dir), last_id)
+            new_track, last_id = self.build_track(soup, os.path.join(self.directories.parent, encoded_dir), last_id)
             tracklist.append(new_track)
             music_node.append(soup.new_tag(name="vlc:item", tid=f"{last_id}"))
 
@@ -326,6 +331,7 @@ class PlaylistHandler(object):
 
 
 if __name__ == '__main__':
+    start_time = datetime.now()
     parser = argparse.ArgumentParser(description="This program generates or updates an XSPF playlist by scanning a"
                                      "directory for subdirectories containing music files.")
     parser.add_argument("-d", "--directory", help="Full path to the directory from which to add tracks.",
@@ -350,6 +356,7 @@ if __name__ == '__main__':
     ph.save_playlist(out_soup)
 
     log_it(level="info",
-           text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}")
+           text=f"Generated a playlist with {count} items from file {args.in_file}, directory {args.source_dir}, "
+           f"runtime={str(datetime.now() - start_time)}")
 
     exit(0)
