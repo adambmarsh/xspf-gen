@@ -1,9 +1,9 @@
 import argparse
 import json
 import os
-from datetime import datetime
 import re
 from collections import namedtuple
+from datetime import datetime
 from enum import auto, Enum
 
 import dbusnotify
@@ -13,8 +13,7 @@ from bs4 import BeautifulSoup, Tag
 __version__ = '0.1.1'
 
 
-book_entry = namedtuple("book_entry", "id title author error")
-
+media_items = namedtuple("media_dirs", "parent files")
 
 HOME_DIR = os.path.expanduser("~")
 
@@ -153,18 +152,15 @@ class PlaylistHandler(object):
         self._post_notification(summary, notify_text[code])
 
     @staticmethod
-    def _abs_path(parent, children):
-        return [os.path.join(parent, child) for child in children]
+    def has_media(abs_parent, dir_name):
+        dir_path = os.path.join(abs_parent, dir_name)
 
-    @staticmethod
-    def has_media(dir_path):
         for curr_dir, sub_dirs, files in os.walk(dir_path):
             if not files:
                 continue
 
-            for file_name in files:
-                if file_name.split(".")[-1] in MEDIA_EXTENSIONS:
-                    return True
+            if next((file_name for file_name in files if str(file_name).split(".")[-1] in MEDIA_EXTENSIONS), []):
+                return True
 
         return False
 
@@ -181,22 +177,12 @@ class PlaylistHandler(object):
             # Get media files, but only from the top directory
             work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
 
-        out_dirs = (in_dir, [w_dir for w_dir in work_dirs if self.has_media(os.path.join(in_dir, w_dir))] + work_files)
+        out_dirs = media_items(
+            parent=in_dir,
+            files=sorted(work_files) + sorted([w_dir for w_dir in work_dirs if self.has_media(in_dir, w_dir)])
+        )
 
         return out_dirs
-
-    def list_dir_files(self, in_dir=None):
-        if not in_dir:
-            in_dir = self.source_dir
-
-        work_list = list()
-        for curr_dir, sub_dirs, files in os.walk(in_dir):
-            if curr_dir != in_dir:
-                break
-
-            work_list += [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
-
-        return work_list
 
     @staticmethod
     def write_file(filename, file_data, dest_dir=None):
@@ -306,13 +292,10 @@ class PlaylistHandler(object):
         tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node_music(soup)
-        directories = self.directories[1]
-        sorted_directories = sorted(directories)
-        dir_path = self.directories[0]
 
-        for ix, dir_name in enumerate(sorted_directories):
+        for ix, dir_name in enumerate(self.directories.files):
             encoded_dir = re.sub(r']', '%5D', re.sub(r'\[', '%5B', dir_name))
-            new_track, last_id = self.build_track(soup, os.path.join(dir_path, encoded_dir), last_id)
+            new_track, last_id = self.build_track(soup, os.path.join(self.directories.parent, encoded_dir), last_id)
             tracklist.append(new_track)
             music_node.append(soup.new_tag(name="vlc:item", tid=f"{last_id}"))
 
