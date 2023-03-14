@@ -55,4 +55,6 @@ expressly not to any third-party dependencies or the Calibre application.
 
 MIT
 
+Icons included with this program were created by and are the sole property of the copyright holder.
+
 Note that separate licenses apply to third-party dependencies.
