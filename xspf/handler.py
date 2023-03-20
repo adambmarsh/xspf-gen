@@ -301,7 +301,7 @@ class PlaylistHandler(object):
         self._notify(Result.PROCESSED, track_count=tracks)
 
 
-if __name__ == '__main__':
+def main():
     start_time = datetime.now()
     parser = argparse.ArgumentParser(description="This program generates or updates an XSPF playlist by scanning a"
                                      "directory for subdirectories containing music files.")
@@ -332,3 +332,7 @@ if __name__ == '__main__':
            f"run time={str(datetime.now() - start_time)}")
 
     exit(0)
+
+
+if __name__ == '__main__':
+    main()
