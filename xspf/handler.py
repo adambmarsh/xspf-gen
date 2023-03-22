@@ -6,9 +6,8 @@ from collections import namedtuple
 from datetime import datetime
 from enum import auto, Enum
 
-import dbusnotify
 from bs4 import BeautifulSoup, Tag
-from dotenv import dotenv_values
+from dbusnotifier.notifysender import NotifySender
 
 
 __version__ = '0.1.2'
@@ -59,11 +58,20 @@ class PlaylistHandler(object):
         self._source_dir = None
         self._directories = None
         self._out_file = None
+        self._notifier = None
 
         self.source_dir = source_dir
         self.start_file = start_file
         self.out_file = out_file
         self.directories = tuple()
+        messages = {
+            Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
+            else "Starting to generate playlist ...",
+            Result.PLAYLIST_GENERATED: "Playlist ready",
+            Result.PROCESSED: f"Playlist saved in {self.out_file}"
+        }
+
+        self.notifier = NotifySender(title="xspf-gen", messages=messages)
 
     @property
     def start_file(self):
@@ -103,42 +111,6 @@ class PlaylistHandler(object):
         set_b = set(re.split(r'[:_. ,]+', in_b))
 
         return set_a.issubset(set_b) or set_b.issubset(set_a)
-
-    @staticmethod
-    def _post_notification(in_summary="xspf-gen", in_description=""):
-        config = dotenv_values(".env-xspf-gen")
-        icon_file = os.path.join(os.getcwd(), config.get("XSPF-GEN-ICON", ''))
-
-        if not os.path.isfile(icon_file):
-            icon_file = ""
-        dbusnotify.write(
-            in_description,
-            title=in_summary,
-            icon=icon_file,  # On Windows .ico is required, on Linux - .png
-        )
-
-    def _notify(self, code=Result.UNKNOWN, **kwargs):
-        summary = "xspf-gen"
-
-        track_count = kwargs.get('track_count', 0)
-
-        notify_text = {
-            Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
-            else "Starting to generate playlist ...",
-            Result.PLAYLIST_GENERATED: "Playlist ready" + f", contains {track_count} entries" if track_count else "",
-            Result.PROCESSED:
-                f"Playlist saved in {self.out_file}" + f", contains {track_count} tracks" if track_count else "",
-        }
-
-        alt_text = kwargs.get("alt_text", None)
-        if alt_text:
-            self._post_notification(summary, alt_text)
-            return
-
-        if code not in notify_text:
-            return
-
-        self._post_notification(summary, notify_text[code])
 
     @staticmethod
     def has_media(abs_parent, dir_name):
@@ -277,7 +249,7 @@ class PlaylistHandler(object):
         return max([int(tag.text) for tag in in_soup.find_all(name="vlc:id", recursive=True) if isinstance(tag, Tag)])
 
     def build_playlist(self):
-        self._notify(Result.PROCESSING)
+        self.notifier.notify(select_key=Result.PROCESSING)
         self.directories = self.list_directories()
         soup = self.get_soup()
         tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
@@ -290,15 +262,15 @@ class PlaylistHandler(object):
             tracklist.append(new_track)
             music_node.append(soup.new_tag(name="vlc:item", tid=f"{last_id}"))
 
-        # self._notify(code=Result.PLAYLIST_GENERATED, track_count=last_id)
+        # self.notifier.notify(select_key=Result.PLAYLIST_GENERATED)
         return soup, last_id
 
-    def save_playlist(self, in_soup, tracks=0):
+    def save_playlist(self, in_soup):
         output_file = os.path.basename(self.out_file)
         output_path = next(iter(self.out_file.split(output_file)), "")
 
         self.write_file(output_file, str(in_soup), output_path)
-        self._notify(Result.PROCESSED, track_count=tracks)
+        self.notifier.notify(select_key=Result.PROCESSED)
 
 
 def main():
@@ -324,7 +296,7 @@ def main():
 
     ph = PlaylistHandler(source_dir=args.source_dir, start_file=args.in_file, out_file=args.out_file)
     out_soup, count = ph.build_playlist()
-    ph.save_playlist(out_soup, tracks=count)
+    ph.save_playlist(out_soup)
 
     input_file_str = f"file {args.in_file}, " if args.in_file else ""
     log_it(level="info",
