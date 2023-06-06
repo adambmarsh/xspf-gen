@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup, Tag
 from dbusnotifier.notifysender import NotifySender
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 media_items = namedtuple("media_dirs", "parent files")
