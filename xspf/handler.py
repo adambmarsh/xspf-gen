@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import auto, Enum
 
 from bs4 import BeautifulSoup, Tag
-from dbusnotifier.notifysender import NotifySender
+from dbus_notifier.notifysender import NotifySender
 
 
 __version__ = '0.1.3'

@@ -2,10 +2,7 @@ attrs==23.1.0
 beautifulsoup4==4.12.2
 check-wheel-contents==0.4.0
 click==8.1.3
-dbus-next==0.2.3
-dbus-python==1.3.2
-dbusnotify==0.0.2
-dbus-notifier=0.1.1
+dbus-notifier>=0.1.2
 idna==3.4
 lxml==4.9.2
 packaging==23.1
