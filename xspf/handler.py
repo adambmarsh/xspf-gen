@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
 
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 
 media_items = namedtuple("media_dirs", "parent files")
@@ -257,7 +257,7 @@ class PlaylistHandler(object):
         music_node = self.get_vlc_node_music(soup)
 
         for ix, dir_name in enumerate(self.directories.files):
-            encoded_dir = re.sub(r']', '%5D', re.sub(r'\[', '%5B', dir_name))
+            encoded_dir = dir_name.replace(']', '%5D').replace('[', '%5B')
             new_track, last_id = self.build_track(soup, os.path.join(self.directories.parent, encoded_dir), last_id)
             tracklist.append(new_track)
             music_node.append(soup.new_tag(name="vlc:item", tid=f"{last_id}"))
