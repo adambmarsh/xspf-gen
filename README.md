@@ -40,9 +40,14 @@ python $HOME/scripts/xspf-gen/main.py -f $HOME/Music/playlists/radio.xspf -d $HO
 
 Please see `requirements.txt`.
 
+Note that the dbug-notifier package needs to be installed as follows (this is for version 0,1.6):
+```commandline
+pip install -i https://test.pypi.org/simple/ dbus-notifier==0.1.6
+```
+
 ## Status
 
-Mar 2023 First draft, tested locally on Manjaro Linux and VLC media player 3.0.18.
+October 2023, tested locally on Manjaro Linux and VLC media player 3.0.18, Python 3.11.
 
 ## Copyright
 
