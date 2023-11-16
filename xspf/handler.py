@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import re
-from collections import namedtuple
+from typing import NamedTuple
 from datetime import datetime
 from enum import auto, Enum
 
@@ -13,13 +13,16 @@ from dbus_notifier.notifysender import NotifySender
 __version__ = '0.1.5'
 
 
-media_items = namedtuple("media_dirs", "parent files")
-
 HOME_DIR = os.path.expanduser("~")
 
 XSPF_HEAD = '<?xml version="1.0" encoding="UTF-8"?>'
 
 MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "ogg", "wma"]
+
+
+class MediaItems(NamedTuple):
+    parent: str
+    files: list
 
 
 def log_it(level='info', src_name=None, text=None):
@@ -114,7 +117,7 @@ class PlaylistHandler(object):
 
     @staticmethod
     def has_media(abs_parent, dir_name):
-        dir_path = os.path.join(abs_parent, dir_name)
+        dir_path = str(os.path.join(abs_parent, dir_name))
 
         for curr_dir, sub_dirs, files in os.walk(dir_path):
             if not files:
@@ -138,7 +141,7 @@ class PlaylistHandler(object):
             # Get media files, but only from the top directory
             work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
 
-        out_dirs = media_items(
+        out_dirs = MediaItems(
             parent=in_dir,
             files=sorted(work_files) + sorted([w_dir for w_dir in work_dirs if self.has_media(in_dir, w_dir)])
         )
