@@ -2,9 +2,9 @@ import argparse
 import json
 import os
 import re
-from typing import NamedTuple
 from datetime import datetime
 from enum import auto, Enum
+from typing import NamedTuple
 
 from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
