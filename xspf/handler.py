@@ -1,10 +1,15 @@
+"""
+This module contains code to generate an xspf playlist compatible with VLC
+"""
 import argparse
 import json
 import os
 import re
+import sys
 from datetime import datetime
 from enum import auto, Enum
 from typing import NamedTuple
+import logging
 
 from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
@@ -21,12 +26,21 @@ MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "ogg", "wma"]
 
 
 class MediaItems(NamedTuple):
+    """
+    This class represents a media item.
+    """
     parent: str
     files: list
 
 
 def log_it(level='info', src_name=None, text=None):
-    import logging
+    """
+    Logger function
+    :param level: String specifying the log level
+    :param src_name: String containing the name of the logging module
+    :param text: A string containing the log message
+    :return: void
+    """
 
     logging.basicConfig(level=logging.DEBUG)
     logger_name = src_name if src_name else __name__
@@ -42,6 +56,9 @@ def log_it(level='info', src_name=None, text=None):
 
 
 class Result(Enum):
+    """
+    This class represents an enumeration of status values
+    """
     PROCESSING = auto()
     FILE_DOES_NOT_EXIST = auto()
     PLAYLIST_GENERATED = auto()
@@ -50,7 +67,7 @@ class Result(Enum):
     UNKNOWN = auto()
 
 
-class PlaylistHandler(object):
+class PlaylistHandler:
     """
     This class either creates a new XSPF playlist or extends an existing one
     by adding track files.
@@ -67,7 +84,7 @@ class PlaylistHandler(object):
         self.out_file = out_file
         self.directories = tuple()
         messages = {
-            Result.PROCESSING: f"Processing  file {repr(self.start_file)} to generate playlist ..." if self.start_file
+            Result.PROCESSING: f"Processing  {repr(self.start_file)} to generate playlist ..." if self.start_file
             else "Starting to generate playlist ...",
             Result.PLAYLIST_GENERATED: "Playlist ready",
             Result.PROCESSED: f"Playlist saved in {self.out_file}"
@@ -76,7 +93,7 @@ class PlaylistHandler(object):
         self.notifier = NotifySender(title="xspf-gen", messages=messages)
 
     @property
-    def start_file(self):
+    def start_file(self):  # pylint: disable=missing-function-docstring
         return self._start_file
 
     @start_file.setter
@@ -84,7 +101,7 @@ class PlaylistHandler(object):
         self._start_file = in_file
 
     @property
-    def out_file(self):
+    def out_file(self):  # pylint: disable=missing-function-docstring
         return self._out_file
 
     @out_file.setter
@@ -92,7 +109,7 @@ class PlaylistHandler(object):
         self._out_file = in_file if in_file else os.path.join(os.getenv('HOME'), "temp", "all.xspf")
 
     @property
-    def source_dir(self):
+    def source_dir(self):  # pylint: disable=missing-function-docstring
         return self._source_dir
 
     @source_dir.setter
@@ -100,15 +117,21 @@ class PlaylistHandler(object):
         self._source_dir = in_dir
 
     @property
-    def directories(self):
+    def directories(self):  # pylint: disable=missing-function-docstring
         return self._directories
 
     @directories.setter
     def directories(self, in_dirs):
-        self._directories = in_dirs if isinstance(in_dirs, tuple) else ("", list())
+        self._directories = in_dirs if isinstance(in_dirs, tuple) else ("", [])
 
     @staticmethod
     def is_subset(in_a, in_b):
+        """
+        Check if one of the two strings is a subset of the other
+        :param in_a: String to check
+        :param in_b: String to Check
+        :return: True if on of the strings is a subset of the other, otherwise False
+        """
         set_a = set(re.split(r'[:_. ,]+', in_a))
         set_b = set(re.split(r'[:_. ,]+', in_b))
 
@@ -116,27 +139,42 @@ class PlaylistHandler(object):
 
     @staticmethod
     def has_media(abs_parent, dir_name):
+        """
+        Check if a directory contains media files.
+        :param abs_parent: Absolute to parent directory
+        :param dir_name: Name of the directory to check
+        :return: True if the directory contains media files, otherwise False
+        """
         dir_path = str(os.path.join(abs_parent, dir_name))
 
         for curr_dir, sub_dirs, files in os.walk(dir_path):
+            _ = curr_dir
+            _ = sub_dirs
+
             if not files:
                 continue
 
-            if next((file_name for file_name in files if str(file_name).split(".")[-1] in MEDIA_EXTENSIONS), []):
+            if next((file_name for file_name in files if str(file_name).rsplit(".", maxsplit=1)[-1] in
+                    MEDIA_EXTENSIONS), []):
                 return True
 
         return False
 
     def list_directories(self, in_dir=None):
+        """
+        List directories with media files in them
+        :param in_dir: Directory for which to produce the listing
+        :return: An instance of MediaItems listing the directory and the media files in it
+        """
         if not in_dir:
             in_dir = self.source_dir
 
-        work_dirs = work_files = list()
+        work_dirs = work_files = []
         for curr_dir, sub_dirs, files in os.walk(in_dir):
             if curr_dir != in_dir:
                 break
 
-            work_dirs += [s_dir for s_dir in sub_dirs]
+            work_dirs += list(sub_dirs)
             # Get media files, but only from the top directory
             work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
 
@@ -149,6 +187,13 @@ class PlaylistHandler(object):
 
     @staticmethod
     def write_file(filename, file_data, dest_dir=None):
+        """
+        Write file to disk.
+        :param filename: Name of the file to use
+        :param file_data: The file contents to use
+        :param dest_dir: Directory where to put the file
+        :return: Always True
+        """
         cur_dir = os.getcwd()
 
         if not dest_dir:
@@ -160,28 +205,33 @@ class PlaylistHandler(object):
         filepath = os.path.join(dest_dir, filename)
 
         if isinstance(file_data, dict):
-            with open(filepath, 'w') as out:
+            with open(filepath, 'w', encoding="UTF-8") as out:
                 out.write(json.dumps(file_data, indent=4, sort_keys=True, ensure_ascii=False))
         elif isinstance(file_data, str):
-            with open(filepath, 'w') as out:
+            with open(filepath, 'w', encoding="UTF-8") as out:
                 out.write(file_data)
         else:
-            with open(filepath, 'wb') as out:
+            with open(filepath, 'wb', encoding="UTF-8") as out:
                 out.write(file_data)
 
         return True
 
     @staticmethod
     def read_file(filepath):
+        """
+        Read file at the file path
+        :param filepath: The file path and name
+        :return: The contents of the file as a string on success, otherwise an empty string
+        """
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath, 'r', encoding="UTF-8") as f:
                 return f.read().strip()
         except FileNotFoundError:
             print(f"Missing: {filepath}")
             return ''
 
     @staticmethod
-    def make_soup():
+    def make_soup():   # pylint: disable=missing-function-docstring
         soup = BeautifulSoup(XSPF_HEAD, "xml")
         playlist_tag = soup.new_tag(name="playlist")
         playlist_tag['xmlns'] = "http://xspf.org/ns/0/"
@@ -195,20 +245,22 @@ class PlaylistHandler(object):
 
         return soup
 
-    def get_soup(self):
+    def get_soup(self):  # pylint: disable=missing-function-docstring
         if not self.start_file:
             return self.make_soup()
 
         return BeautifulSoup(self.read_file(self.start_file), "xml")
 
-    def get_vlc_node_music(self, in_soup):
+    def get_vlc_node_music(self, in_soup):  # pylint: disable=missing-function-docstring
         music_node = next(iter(in_soup.find_all(name="vlc:node", recursive=True, title="music")), None)
 
         if not music_node:
             return self.create_vlc_node_music(in_soup)
 
+        return music_node
+
     @staticmethod
-    def create_vlc_node_music(now_soup):
+    def create_vlc_node_music(now_soup):  # pylint: disable=missing-function-docstring
         result = now_soup.find_all(name="extension", recursive=True)
         result_tags = [res for res in result if isinstance(res, Tag)]
 
@@ -227,7 +279,7 @@ class PlaylistHandler(object):
         return music_node_tag
 
     @staticmethod
-    def build_track(now_soup, dir_name, last_id):
+    def build_track(now_soup, dir_name, last_id):  # pylint: disable=missing-function-docstring
         track_tag = now_soup.new_tag(name="track")
         location_tag = now_soup.new_tag(name="location")
         location_tag.append("file:///" + dir_name)
@@ -242,15 +294,17 @@ class PlaylistHandler(object):
         return track_tag, last_id
 
     @staticmethod
-    def get_last_id(in_soup):
+    def get_last_id(in_soup):  # pylint: disable=missing-function-docstring
         tracklist = next(iter(in_soup.find_all(name="trackList", recursive=True, limit=1)), None)
 
         if not tracklist.contents:
             return -1
 
-        return max([int(tag.text) for tag in in_soup.find_all(name="vlc:id", recursive=True) if isinstance(tag, Tag)])
+        return max(
+            int(tag.text) for tag in in_soup.find_all(name="vlc:id", recursive=True) if isinstance(tag, Tag)
+        )
 
-    def build_playlist(self):
+    def build_playlist(self):  # pylint: disable=missing-function-docstring
         self.notifier.notify(select_key=Result.PROCESSING)
         self.directories = self.list_directories()
         soup = self.get_soup()
@@ -258,7 +312,7 @@ class PlaylistHandler(object):
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node_music(soup)
 
-        for ix, dir_name in enumerate(self.directories.files):
+        for dir_name in self.directories.files:
             encoded_dir = dir_name.replace(']', '%5D').replace('[', '%5B')
             new_track, last_id = self.build_track(soup, os.path.join(self.directories.parent, encoded_dir), last_id)
             tracklist.append(new_track)
@@ -267,7 +321,7 @@ class PlaylistHandler(object):
         # self.notifier.notify(select_key=Result.PLAYLIST_GENERATED)
         return soup, last_id
 
-    def save_playlist(self, in_soup):
+    def save_playlist(self, in_soup):  # pylint: disable=missing-function-docstring
         output_file = os.path.basename(self.out_file)
         output_path = next(iter(self.out_file.split(output_file)), "")
 
@@ -275,7 +329,7 @@ class PlaylistHandler(object):
         self.notifier.notify(select_key=Result.PROCESSED)
 
 
-def main():
+def main():  # pylint: disable=missing-function-docstring
     start_time = datetime.now()
     parser = argparse.ArgumentParser(description="This program generates or updates an XSPF playlist by scanning a"
                                      "directory for subdirectories containing music files.")
@@ -284,7 +338,8 @@ def main():
                         dest='source_dir',
                         default='/home/adam/Downloads/books/in-books',
                         required=False)
-    parser.add_argument("-f", "--file", help="The name of the file to which to add tracks from the input directory.",
+    parser.add_argument("-f", "--file", help="The name of the file to which to add tracks from the input"
+                        "directory.",
                         type=str,
                         dest='in_file',
                         default="",
@@ -305,7 +360,7 @@ def main():
            text=f"Generated a playlist with {count} items from {input_file_str}directory {args.source_dir}, "
            f"run time={str(datetime.now() - start_time)}")
 
-    exit(0)
+    sys.exit(0)
 
 
 if __name__ == '__main__':
