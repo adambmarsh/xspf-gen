@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
 
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 
 HOME_DIR = os.path.expanduser("~")
