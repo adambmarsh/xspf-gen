@@ -56,12 +56,20 @@ fi
 while [[ $# -gt 0 ]];
 do
     case "$1" in
+        -c|--icfg)
+            icfg="$2"
+            shift
+            ;;
         -d|--idir)
             idir="$2"
             shift
             ;;
         -f|--ifile)
             ifile="$2"
+            shift
+            ;;
+        -m|--imulti)
+            imulti="$2"
             shift
             ;;
         -o|--ofile)
@@ -75,6 +83,10 @@ do
     esac
     shift
 done
+
+if [[ -n "$icfg" ]] || [[ ! -f "$icfg" ]]; then
+    icfg=''
+fi
 
 if [[ -f "$ifile" ]] || [[ -f $playlists_path/$ifile ]]; then
     IFILEDIR=${ifile%/*}
@@ -113,18 +125,20 @@ temp_output_file="$playlists_path"/unformatted.xspf
 
 ## Use path appropriate to the host system in the directive below:
 # shellcheck source=/home/adam/.virtualenvs/generate-vlc-playlist/bin/activate
-source "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" && deactivate
+source "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" && deactivate
 
 reformat_output() {
     export XMLLINT_INDENT="    "
+    
+    for output_file in "${ofile%/*}"/*.xspf; do
+        mv "$output_file"  "$temp_output_file"
 
-    mv "$output_file"  "$temp_output_file"
+        xmllint -format -recover "$temp_output_file" > "$output_file"
 
-    xmllint -format -recover "$temp_output_file" > "$output_file"
-
-    if [[ -f "$temp_output_file" ]]; then
-        rm "$temp_output_file"
-    fi
+        if [[ -f "$temp_output_file" ]]; then
+            rm "$temp_output_file"
+        fi
+    done
 }
 
 reformat_output

@@ -63,3 +63,4 @@ target/
 # Project specific
 .env*
 README.html
+xspf-gen.yml
