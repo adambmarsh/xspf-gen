@@ -517,12 +517,12 @@ def main():  # pylint: disable=missing-function-docstring
     parser.add_argument("-c", "--config", help="Full path to a YAML file with per-genre playlist config.",
                         type=str,
                         dest='config',
-                        default='~/scripts/xspf-gen/xspf-gen.yml',
+                        default=f'{os.environ['HOME']}/scripts/xspf-gen/xspf-gen.yml',
                         required=False)
     parser.add_argument("-d", "--directory", help="Full path to the directory from which to add tracks.",
                         type=str,
                         dest='source_dir',
-                        default='/home/adam/lanmount/music',
+                        default=f'{os.environ['HOME']}/lanmount/music',
                         required=False)
     parser.add_argument("-f", "--file", help="The name of the file to which to add tracks from the input"
                         "directory.",
