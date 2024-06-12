@@ -2,6 +2,7 @@
 This module contains code to generate an xspf playlist compatible with VLC
 """
 import argparse
+import glob
 import json
 import os
 import re
@@ -11,6 +12,7 @@ from datetime import datetime
 from enum import auto, Enum
 from typing import NamedTuple
 import logging
+from shutil import copyfile
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.comments import CommentedMap, CommentedSeq  # NOQA  # pylint: disable=unused-import
@@ -19,9 +21,10 @@ import music_tag
 
 from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
+import psycopg2
+from psycopg2 import sql
 
-
-__version__ = '0.1.7'
+__version__ = '0.2.0'
 
 
 HOME_DIR = os.path.expanduser("~")
@@ -29,6 +32,34 @@ HOME_DIR = os.path.expanduser("~")
 XSPF_HEAD = '<?xml version="1.0" encoding="UTF-8"?>'
 
 MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "ogg", "wma"]
+
+
+# DB table:
+Album = {
+    "title": "",
+    "artist": "",
+    "date": datetime.now(),
+    "comment": "",
+    "label": "",
+    "path": "",
+    "id": None
+}
+
+
+# DB table:
+Song = {
+    "title": "",
+    "track_id": -1,
+    "genre": "",
+    "artist": "",
+    "composer": "",
+    "performer": "",
+    "date": datetime.now(),
+    "file": "",
+    "comment": "",
+    "album_id": -1,
+    "id": -1
+}
 
 
 def eval_bool_str(in_str):
@@ -54,6 +85,89 @@ def eval_bool_str(in_str):
         return False
 
     return True
+
+
+def get_config(cfg_file_name=''):
+    """
+    Retrieve the configuration information. Wrapper for the ConfigGetter._get_name_val()
+    :param cfg_file_name: Optional name of the file to use, otherwise the first
+    .cfg in the parent directory is used.
+    :return: A dictionary containing the configuration.
+    """
+    a_cfg = ConfigGetter(cfg_file_name)
+
+    return a_cfg.cfg
+
+
+class ConfigGetter:
+    """
+    This class obtains the configuration params from a file. The configuration is read from
+    a flat file (no sections), consisting of name-value pairs, e.g. my_name=my_value. The
+    file can contain environment vars or any other config.
+    """
+
+    def __init__(self, file_name=''):
+        self._cfg_file_name = ''
+        self._cfg = {}
+        self.cfg_file_name = file_name
+        self._get_name_val()
+
+        # logging.basicConfig(level=logging.DEBUG)
+
+    @property
+    def cfg_file_name(self):  # pylint: disable=missing-function-docstring
+        return self._cfg_file_name
+
+    @cfg_file_name.setter
+    def cfg_file_name(self, in_name=''):
+        """
+        This method sets the name of the config file. The full path to the
+        file, including the file name, can be provided by the caller,
+        otherwise the method tries to find the config file in the parent
+        directory.
+        :param in_name: Optional file name, if not provided or if the file
+        does not exist, the method finds the first .cfg file in the parent
+        directory.
+        :return: The path and name of the ini file.
+        """
+        if not in_name:
+            return
+
+        if os.path.isfile(in_name):
+            self._cfg_file_name = os.path.abspath(in_name)
+            return
+
+        # Otherwise try to find the first *.cfg file in parent directory:
+        cwd = os.path.dirname(os.path.realpath(__file__))
+        pardir = os.path.abspath(os.path.join(cwd, os.pardir))
+
+        search_file = pardir + '/' + in_name
+        for filename in glob.iglob(search_file, recursive=True):
+            if not filename.endswith(in_name):
+                continue
+
+            self._cfg_file_name = filename
+            return
+
+        return
+
+    @property
+    def cfg(self):
+        """
+        Retrieves the configuration details from the config file.
+        :return: The contents of the config file as a dictionary.
+        """
+        return self._cfg
+
+    @cfg.setter
+    def cfg(self, in_cfg):
+        self._cfg = in_cfg
+
+    def _get_name_val(self):
+        with open(self.cfg_file_name, encoding='UTF-8') as cfg_file:
+            for line in cfg_file:
+                name, var = line.partition("=")[::2]
+                self.cfg[name.strip()] = re.sub(r'[\\\n]+$', '', var)
 
 
 class DirItem(NamedTuple):
@@ -111,7 +225,7 @@ class PlaylistHandler:
     This class either creates a new XSPF playlist or extends an existing one
     by adding track files.
     """
-    def __init__(self, source_dir="~/temp", start_file="", out_file="", multi=False, cfg=None):
+    def __init__(self, source_dir="~/temp", start_file="", out_file="", multi=False, list_cfg=None, env_cfg=None):
         self._start_file = None
         self._source_dir = None
         self._directories = None
@@ -123,8 +237,9 @@ class PlaylistHandler:
         self.start_file = start_file
         self._genre_lists = OrderedDict()
 
+        script_dir = os.path.dirname(os.path.realpath(__file__))
         self.genre_lists = self.read_yaml(
-            cfg if cfg else os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'xspf-gen.yml')
+            list_cfg if list_cfg else os.path.join(script_dir, '..', 'xspf-gen.yml')
         )
         self.out_file = os.path.basename(out_file)
         self.out_dir = os.path.dirname(out_file)
@@ -136,6 +251,20 @@ class PlaylistHandler:
             Result.PLAYLIST_GENERATED: "Playlist ready",
             Result.PROCESSED: f"Playlist saved in {self.out_dir}"
         }
+
+        self._conn = None
+        self._cursor = None
+
+        db_cfg = get_config(env_cfg if env_cfg else '.env_db')
+        self.conn = psycopg2.connect(
+            host=db_cfg.get('DB_HOST'),
+            port=int(db_cfg.get('DB_PORT')),
+            database=db_cfg.get('DB_NAME'),
+            user=db_cfg.get('DB_USER'),
+            password=db_cfg.get('DB_PASS')
+        )
+
+        self.cursor = self.conn.cursor()
 
         self.notifier = NotifySender(title="xspf-gen", messages=messages)
 
@@ -228,6 +357,24 @@ class PlaylistHandler:
 
         return f_contents
 
+    def read_dir_genres_from_db(self):
+        """
+        This method reads a row from the named DB table
+        :return: A dictionary of data read from the DB
+        """
+        q_obj = sql.SQL("SELECT DISTINCT album.path, song.genre from public.album FULL OUTER JOIN public.song ON "
+                        "public.album.id = public.song.album_id")
+
+        self.cursor.execute(q_obj)
+        fetch_results = self.cursor.fetchall()
+
+        self.conn.close()
+
+        if not fetch_results:
+            return []
+
+        return sorted(fetch_results)
+
     def has_media(self, abs_parent, dir_name):
         """
         Check if a directory contains media files.
@@ -276,6 +423,18 @@ class PlaylistHandler:
             in_dir = self.source_dir
 
         work_dirs = []
+        out_subdirectories = []
+
+        db_dirs = self.read_dir_genres_from_db()
+
+        if db_dirs:
+            for a_dir in db_dirs:
+                a_dir_name = next(iter(a_dir[0].split('/')), '')
+                dir_to_add = DirItem(name=a_dir_name, genre=a_dir[1] if a_dir_name != 'Various' else 'Pop')
+                if a_dir_name and dir_to_add not in out_subdirectories:
+                    out_subdirectories.append(dir_to_add)
+
+            return MediaDirs(parent=in_dir, dirs=out_subdirectories)
 
         for curr_dir, sub_dirs, files in os.walk(in_dir):
             if curr_dir != in_dir:
@@ -286,8 +445,6 @@ class PlaylistHandler:
             work_files = [s_file for s_file in files if s_file.split(".")[-1] in MEDIA_EXTENSIONS]
             if not work_files:
                 continue
-
-        out_subdirectories = []
 
         for work_dir in sorted(list(work_dirs)):
             has_media, media_genre = self.has_media(in_dir, work_dir)
@@ -451,7 +608,7 @@ class PlaylistHandler:
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node(soup)
 
-        playlists = ['radio.xspf'] + [f"{key}.xspf" for key in self.genre_lists]
+        playlists = (['radio.xspf'] if self.start_file else []) + [f"{key}.xspf" for key in self.genre_lists]
 
         for play_list in playlists:
             encoded_name = play_list.replace(']', '%5D').replace('[', '%5B')
@@ -466,11 +623,19 @@ class PlaylistHandler:
 
     def build_genre_playlists(self):  # pylint: disable=missing-function-docstring
         item_count = 0
+
+        if self.start_file:
+            copyfile(self.start_file, os.path.join(self.out_dir, os.path.basename(self.start_file)))
+
         for list_name, list_genres in self.genre_lists.items():
             selected_dirs = []
 
             for folder in self.directories.dirs:
-                folder_genres = set(folder.genre.split(', '))
+                try:
+                    folder_genres = set(folder.genre.split(', '))
+                except AttributeError:
+                    log_it('error', __name__, f"{repr(folder)}")
+                    sys.exit(111)
 
                 if 'Jazz' not in list_name and folder_genres.intersection(self.genre_lists['Jazz_Blues']):
                     continue
@@ -524,6 +689,12 @@ def main():  # pylint: disable=missing-function-docstring
                         dest='source_dir',
                         default=f'{os.environ['HOME']}/lanmount/music',
                         required=False)
+    parser.add_argument("-e", "--env_config", help="Full path to a file with DB and other environment"
+                                                   " configuration params.",
+                        type=str,
+                        dest='env_config',
+                        default=f'{os.environ['HOME']}/scripts/xspf-gen/.env_db',
+                        required=False)
     parser.add_argument("-f", "--file", help="The name of the file to which to add tracks from the input"
                         "directory.",
                         type=str,
@@ -544,7 +715,7 @@ def main():  # pylint: disable=missing-function-docstring
     args = parser.parse_args()
 
     ph = PlaylistHandler(source_dir=args.source_dir, start_file=args.in_file, out_file=args.out_file,
-                         multi=eval_bool_str(args.multiple), cfg=args.config)
+                         multi=eval_bool_str(args.multiple), list_cfg=args.config, env_cfg=args.env_config)
     count = ph.make_playlists()
 
     input_file_str = f"file {args.in_file}, " if args.in_file else ""

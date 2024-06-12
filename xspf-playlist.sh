@@ -39,8 +39,11 @@ playlists_path="$HOME/Music/playlists"
 Usage() {
     echo "This script generates a VLC-compatible xspf playlist as a file."
     echo "Usage:"
+    echo "    -c \"list configuration file for multi-list output \""
     echo "    -d \"input directory, directory to scan, default is $HOME/lanmount/music \""
+    echo "    -e \"enviornment (DB) configuration file, a flat file of name-value pairs \""
     echo "    -f \"input file, playlist to include in output first\""
+    echo "    -m \"flag indicating whether to generate multiple lists referenced in all.xspf (True) or a single all.xspf\""
     echo "    -o \"output file, default is $HOME/Music/playlists/all.xspf\""
     echo "    --help"
 }
@@ -64,6 +67,10 @@ do
             idir="$2"
             shift
             ;;
+        -e|--ienvcfg)
+            ienvcfg="$2"
+            shift
+            ;;
         -f|--ifile)
             ifile="$2"
             shift
@@ -84,8 +91,12 @@ do
     shift
 done
 
-if [[ -n "$icfg" ]] || [[ ! -f "$icfg" ]]; then
+if [[ -z "$icfg" ]] || [[ ! -f "$icfg" ]]; then
     icfg=''
+fi
+
+if [[ -z "$ienvcfg" ]] || [[ ! -f "$ienvcfg" ]]; then
+    ienvcfg=''
 fi
 
 if [[ -f "$ifile" ]] || [[ -f $playlists_path/$ifile ]]; then
@@ -125,7 +136,7 @@ temp_output_file="$playlists_path"/unformatted.xspf
 
 ## Use path appropriate to the host system in the directive below:
 # shellcheck source=/home/adam/.virtualenvs/generate-vlc-playlist/bin/activate
-source "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" && deactivate
+source "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" -e "$ienvcfg" && deactivate
 
 reformat_output() {
     export XMLLINT_INDENT="    "

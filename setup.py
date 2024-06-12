@@ -27,7 +27,7 @@ requirements = [
 setuptools.setup(
     name="xspfgen",
     packages=setuptools.find_packages(),
-    version="0.1.7",
+    version="0.2.0",
     author="Adam Bukolt",
     author_email="abukolt@gmx.com",
     description="Package to create an XSPF playlist (Vlc compatible)",
