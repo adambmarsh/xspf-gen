@@ -32,7 +32,7 @@ ofile=""
 activate_path="$HOME/.virtualenvs/generate-vlc-playlist/bin/activate"
 python_pkg="$HOME/scripts/xspf-gen/xspf/handler.py"
 music_path="$HOME/lanmount/music"
-playlists_path="$HOME/Music/playlists"
+playlist_path="$HOME/Music/playlist"
 
 # echo "activation path: $activate_path"
 
@@ -44,7 +44,7 @@ Usage() {
     echo "    -e \"enviornment (DB) configuration file, a flat file of name-value pairs \""
     echo "    -f \"input file, playlist to include in output first\""
     echo "    -m \"flag indicating whether to generate multiple lists referenced in all.xspf (True) or a single all.xspf\""
-    echo "    -o \"output file, default is $HOME/Music/playlists/all.xspf\""
+    echo "    -o \"output file, default is $HOME/Music/playlist/all.xspf\""
     echo "    --help"
 }
 
@@ -99,7 +99,7 @@ if [[ -z "$ienvcfg" ]] || [[ ! -f "$ienvcfg" ]]; then
     ienvcfg=''
 fi
 
-if [[ -f "$ifile" ]] || [[ -f $playlists_path/$ifile ]]; then
+if [[ -f "$ifile" ]] || [[ -f $playlist_path/$ifile ]]; then
     IFILEDIR=${ifile%/*}
     IFILENAME=${ifile##*/}
     source_file="$IFILENAME"
@@ -107,7 +107,7 @@ if [[ -f "$ifile" ]] || [[ -f $playlists_path/$ifile ]]; then
     if [[ -n $IFILEDIR ]] && [[ -n $IFILENAME ]] && [[ $IFILEDIR != "$IFILENAME" ]]; then
         f_option=(-f "$ifile")
     else
-        f_option=(-f "$playlists_path"/"$source_file")
+        f_option=(-f "$playlist_path"/"$source_file")
     fi
 else
     f_option=()
@@ -120,10 +120,10 @@ if [[ -n "$ofile" ]]; then
     if [[ -n "$OFILEDIR" ]] && [[ "$OFILEDIR" != "$OFILENAME" ]] && [[ -d "$OFILEDIR" ]]; then
         output_file="$ofile"
     else
-        output_file="$playlists_path/$OFILENAME"
+        output_file="$playlist_path/$OFILENAME"
     fi
 else
-    output_file="$playlists_path/all.xspf"
+    output_file="$playlist_path/all.xspf"
 fi
 
 if [[ -d "$idir" ]]; then
@@ -132,7 +132,7 @@ else
     input_dir="$music_path"
 fi
 
-temp_output_file="$playlists_path"/unformatted.xspf
+temp_output_file="$playlist_path"/unformatted.xspf
 
 ## Use path appropriate to the host system in the directive below:
 # shellcheck source=/home/adam/.virtualenvs/generate-vlc-playlist/bin/activate
