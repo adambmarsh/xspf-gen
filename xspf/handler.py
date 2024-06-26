@@ -4,25 +4,25 @@ This module contains code to generate an xspf playlist compatible with VLC
 import argparse
 import glob
 import json
+import logging
 import os
 import re
 import sys
 from collections import OrderedDict
 from datetime import datetime
-from enum import auto, Enum
-from typing import NamedTuple
-import logging
+from enum import Enum, auto
 from shutil import copyfile
-from ruamel.yaml.scanner import ScannerError
-from ruamel.yaml.parser import ParserError
-from ruamel.yaml.comments import CommentedMap, CommentedSeq  # NOQA  # pylint: disable=unused-import
-from ruamel.yaml import YAML
-import music_tag
+from typing import NamedTuple
 
+import music_tag
+import psycopg2
 from bs4 import BeautifulSoup, Tag
 from dbus_notifier.notifysender import NotifySender
-import psycopg2
 from psycopg2 import sql
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq  # NOQA  # pylint: disable=unused-import
+from ruamel.yaml.parser import ParserError
+from ruamel.yaml.scanner import ScannerError
 
 __version__ = '0.2.0'
 
