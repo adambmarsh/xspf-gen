@@ -581,7 +581,7 @@ class PlaylistHandler:
         :return: the last id from the playlist (count of items)
         """
         soup = self.get_soup(playlist_name)
-        tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
+        tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), Tag)
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node(soup)
         use_directories = use_directories if use_directories else self.directories
@@ -599,12 +599,12 @@ class PlaylistHandler:
 
     def build_parent_playlist(self, playlist_name='all'):
         """
-        Build one the parent xspf playlist that references radio.xspf and other, created playlists.
+        Build the parent xspf playlist that references radio.xspf and other, created playlists.
         :param playlist_name: A string containing the name of the playlist
         :return: the last id from the parent playlist
         """
         soup = self.get_soup(playlist_name)
-        tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), None)
+        tracklist = next(iter(soup.find_all(name="trackList", recursive=True, limit=1)), Tag)
         last_id = self.get_last_id(soup)
         music_node = self.get_vlc_node(soup)
 

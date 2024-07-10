@@ -1,3 +1,6 @@
+[MASTER]
+init-hook='import sys; sys.path.append("/home/adam/.virtualenvs/generate-vlc-playlist/lib/python3.12/site-packages/")'
+
 [MAIN]
 
 # Analyse import fallback blocks. This can be used to support both Python 2 and
