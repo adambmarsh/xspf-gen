@@ -31,7 +31,7 @@ HOME_DIR = os.path.expanduser("~")
 
 XSPF_HEAD = '<?xml version="1.0" encoding="UTF-8"?>'
 
-MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "ogg", "wma"]
+MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "m4a", "ogg", "wma"]
 
 
 # DB table:
