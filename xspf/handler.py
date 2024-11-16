@@ -637,7 +637,7 @@ class PlaylistHandler:
                     log_it('error', __name__, f"{repr(folder)}")
                     sys.exit(111)
 
-                if 'Jazz' not in list_name and folder_genres.intersection(self.genre_lists['Jazz_Blues']):
+                if 'Jazz' not in list_name and folder_genres.intersection(self.genre_lists['Jazz']):
                     continue
 
                 if not folder_genres.intersection(list_genres):

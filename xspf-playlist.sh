@@ -136,7 +136,7 @@ temp_output_file="$playlist_path"/unformatted.xspf
 
 ## Use path appropriate to the host system in the directive below:
 # shellcheck source=/home/adam/.virtualenvs/generate-vlc-playlist/bin/activate
-source "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" -e "$ienvcfg" && deactivate
+. "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" -e "$ienvcfg" && deactivate
 
 reformat_output() {
     export XMLLINT_INDENT="    "
