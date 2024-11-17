@@ -31,7 +31,7 @@ HOME_DIR = os.path.expanduser("~")
 
 XSPF_HEAD = '<?xml version="1.0" encoding="UTF-8"?>'
 
-MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', "m4a", "ogg", "wma"]
+MEDIA_EXTENSIONS = ['ape', 'flac', 'mp3', 'ogg', 'wma']
 
 
 # DB table:
@@ -641,6 +641,10 @@ class PlaylistHandler:
                     continue
 
                 if not folder_genres.intersection(list_genres):
+                    continue
+
+                # No duplicate folder entries:
+                if folder.name in list({s_dir.name for s_dir in selected_dirs}):
                     continue
 
                 selected_dirs.append(folder)
