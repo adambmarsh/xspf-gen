@@ -629,7 +629,7 @@ class PlaylistHandler:
 
         for list_name, list_genres in self.genre_lists.items():
             selected_dirs = []
-            folder_genres = {}
+            folder_genres = set()
 
             for folder in self.directories.dirs:
                 try:
