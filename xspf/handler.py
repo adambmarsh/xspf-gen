@@ -508,7 +508,7 @@ class PlaylistHandler:
         playlist_tag['version'] = "1"
         title_tag = soup.new_tag(name="title")
         title_tag.append(in_title)
-        playlist_tag.insert(new_child=title_tag, position=0)
+        playlist_tag.insert(0, title_tag)
         playlist_tag.append(soup.new_tag(name="trackList"))
         soup.append(playlist_tag)
 
@@ -629,6 +629,7 @@ class PlaylistHandler:
 
         for list_name, list_genres in self.genre_lists.items():
             selected_dirs = []
+            folder_genres = {}
 
             for folder in self.directories.dirs:
                 try:
