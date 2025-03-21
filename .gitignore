@@ -64,3 +64,4 @@ target/
 .env*
 README.html
 xspf-gen.yml
+pylintrc
