@@ -29,7 +29,7 @@ ofile=""
 
 ## Set paths as appropriate to your system:
 
-activate_path="$HOME/.virtualenvs/generate-vlc-playlist/bin/activate"
+activate_path="$HOME/scripts/xspf-gen/bin/activate"
 python_pkg="$HOME/scripts/xspf-gen/xspf/handler.py"
 music_path="$HOME/lanmount/music"
 playlist_path="$HOME/Music/playlist"
@@ -135,7 +135,7 @@ fi
 temp_output_file="$playlist_path"/unformatted.xspf
 
 ## Use path appropriate to the host system in the directive below:
-# shellcheck source=/home/adam/.virtualenvs/generate-vlc-playlist/bin/activate
+# shellcheck source=/home/adam/scripts/xspf-gen/.venv/bin/activate
 . "$activate_path" && python "$python_pkg" "${f_option[@]}" -d "$input_dir" -o "$output_file" -m "$imulti" -c "$icfg" -e "$ienvcfg" && deactivate
 
 reformat_output() {
