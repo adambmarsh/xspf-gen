@@ -29,7 +29,7 @@ ofile=""
 
 ## Set paths as appropriate to your system:
 
-activate_path="$HOME/scripts/xspf-gen/bin/activate"
+activate_path="$HOME/scripts/xspf-gen/.venv/bin/activate"
 python_pkg="$HOME/scripts/xspf-gen/xspf/handler.py"
 music_path="$HOME/lanmount/music"
 playlist_path="$HOME/Music/playlist"
