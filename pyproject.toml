@@ -26,6 +26,7 @@ dependencies = [
     "packaging>=25.0",
     "platformdirs>=4.3.8",
     "psycopg2>=2.9.10",
+    "psycopg2-binary>=2.9.10",
     "pycodestyle>=2.13.0",
     "pydantic>=2.11.7",
     "pydantic-core>=2.33.2",
