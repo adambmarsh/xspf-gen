@@ -357,7 +357,7 @@ class PlaylistHandler:
 
         return f_contents
 
-    def read_dir_genres_from_db(self):
+    def read_dir_genres_from_db(self) -> list:
         """
         This method reads a row from the named DB table
         :return: A dictionary of data read from the DB
