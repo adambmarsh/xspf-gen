@@ -1,36 +1,27 @@
 [project]
 name = "xspf-gen"
-version = "0.1.1"
+version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "annotated-types>=0.7.0",
-    "astroid>=4.0.0a0",
-    "attrs>=25.3.0",
+    "astroid>=3.3.11",
     "beautifulsoup4>=4.13.4",
-    "check-wheel-contents>=0.6.2",
-    "click>=8.2.1",
     "dbus-next>=0.2.3",
-    "dbus-notifier>=1.1.0",
+    "dbus-notifier==1.1.1",
     "dbus-python>=1.4.0",
     "dbusnotify>=0.0.2",
-    "dill>=0.4.0",
-    "docutils>=0.22rc5",
     "idna>=3.10",
     "isort>=6.0.1",
     "lxml>=5.4.0",
-    "mccabe>=0.7.0",
     "more-itertools>=10.7.0",
     "music-tag>=0.4.3",
     "mutagen>=1.47.0",
-    "packaging>=25.0",
     "platformdirs>=4.3.8",
     "psycopg2-binary>=2.9.10",
-    "pycodestyle>=2.13.0",
     "pydantic>=2.11.7",
     "pydantic-core>=2.33.2",
-    "pyflakes>=3.3.2",
     "python-dotenv>=1.1.0",
     "ruamel-yaml>=0.18.14",
     "ruamel-yaml-clib>=0.2.12",
@@ -40,5 +31,4 @@ dependencies = [
     "tomlkit>=0.13.3",
     "typing-extensions>=4.14.0",
     "typing-inspection>=0.4.1",
-    "wheel-filename>=1.4.2",
 ]

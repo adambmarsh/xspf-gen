@@ -149,16 +149,13 @@ Note that the field `album_id` holds the `id` of the corresponding `Album` row.
 
 ## Dependencies
 
-Please see `requirements.txt`.
-
-Note that the dbug-notifier package needs to be installed as follows (this is for version 0.1.9):
-```commandline
-pip install -i https://test.pypi.org/simple/ dbus-notifier==0.1.9
-```
+Please see `dependencies` in `pyproject.toml`.
 
 ## Status
 
-October 2025, tested locally on Manjaro Linux and VLC media player 3.0.18, Python 3.13.
+October 2024, tested locally on Manjaro Linux and VLC media player 3.0.18, Python 3.13.
+
+July 2025, dbus-notifier is available on https://pypi.org/project/dbus-notifier/
 
 ## Copyright
 
