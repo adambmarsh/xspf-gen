@@ -67,3 +67,4 @@ xspf-gen.yml
 pylintrc
 .python-version
 uv.lock
+.vscode/
