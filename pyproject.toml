@@ -9,7 +9,7 @@ dependencies = [
     "astroid>=3.3.11",
     "beautifulsoup4>=4.13.4",
     "dbus-next>=0.2.3",
-    "dbus-notifier==1.1.1",
+    "dbus-notifier>=1.1.1",
     "dbus-python>=1.4.0",
     "dbusnotify>=0.0.2",
     "idna>=3.10",
